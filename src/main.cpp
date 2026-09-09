@@ -2,19 +2,17 @@
 #include <print>
 #include <stdlib.h>
 #include <httplib.h>
+#include <utility>
 
 #include "../include/scrwl.hpp"
 
 int main(int argc, char** argv) {
     scrwl::Site site("https://crawler-test.com/");
-    std::vector<std::string> links = site.extract_outlinks();
+    scrwl::HtmlParser parser(site);
 
-    scrwl::log_info("Got {} outlinks", links.size());
+    auto links = parser.extract_outlinks();
 
-    for (auto&& x : links)
-    {
-        std::println("{}", x);
-    }
+    scrwl::log_info("Got {} links from {}", links.size(), site.url);
 
     return 0;
 }
