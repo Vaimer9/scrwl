@@ -18,14 +18,13 @@ std::vector<std::string> scrwl::HtmlParser::extract_raw_outlinks()
     if (!this->outlinks.has_value())
     {
         auto begin = std::sregex_iterator(
-            this->raw.begin(),
-            this->raw.end(),
-            href_regex
+            this->raw.begin(), this->raw.end(), href_regex
         );
         auto end = std::sregex_iterator();
+
         scrwl::log_info("Running regex patterns");
 
-        this->outlinks.emplace();
+        this->outlinks.emplace(); // Initialize the array if its not already
         for (auto iter = begin; iter != end; ++iter)
         {
             const std::smatch& m = *iter;

@@ -16,7 +16,7 @@ namespace scrwl
         
         HtmlParser(std::string raw, std::string url):
             raw(raw), url(url) {};
-        HtmlParser(scrwl::Site& site);
+        HtmlParser(scrwl::Site&);
         HtmlParser();
         std::vector<std::string> extract_raw_outlinks();
         std::vector<std::string> extract_outlinks();
