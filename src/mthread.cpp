@@ -2,38 +2,51 @@
 #include "../include/scrwl.hpp"
 #include <mutex>
 #include <optional>
+#include <contracts>
 
 scrwl::ThreadPool::ThreadPool(std::size_t size)
 {
     for (std::size_t i = 0; i < size; i++)
     {
-        this->threads.emplace_back([this] (std::stop_token /* Not needed */) {
-            auto stop_token = this->stop_source.get_token();
+        this->threads.emplace_back(/* per-thread function -> */ [this] (std::stop_token) {
+            auto s_token = this->stop_source.get_token();
 
-            while (!stop_token.stop_requested())
+            // Keep doing tasks until you need to stop
+            while (!s_token.stop_requested())
             {
                 std::function<void()> task;
+
                 {
-                    // Lock the tasklist
                     std::unique_lock lock(this->task_mutex);
 
-                    // Lock is released here and the thread goes to sleep
-                    // Gets woken up when notified && this lambda returns true
-                    this->cond_var.wait(lock, stop_token, [this] {
-                        return this->stop_source.get_token().stop_requested()
-                                || !this->task_list.empty();
+                    // This releases the lock we made above
+                    this->task_condition.wait(lock, s_token, [this] {
+                        // This will run when the main thread will try to wake ts up
+                        // Will only truly wake up when this returns true
+                        return this->stop_source.get_token().stop_requested() || !this->task_list.empty();
                     });
 
-                    if (stop_token.stop_requested()) break; // Don't even wait
+                    // Die if stop is requested
+                    if (s_token.stop_requested()) return;
 
-                    // Get the next task to do now that the thread is woken up
+                    // Or run the latest given task 
                     task = std::move(this->task_list.front());
-                    this->task_list.pop_front();
+                    this->task_list.pop_back();
 
-                    // Release the lock here
+                    this->active_tasks += 1; // Ongoing task now
                 }
 
                 task();
+
+                {
+                    std::unique_lock lock(this->task_mutex);
+                    this->active_tasks -= 1; // Just completed a task
+
+                    if (this->active_tasks == 0 && this->task_list.empty())
+                    {
+                        this->drain_condition.notify_all(); // Tell the destructor its okay to die (existentialism)
+                    }
+                }
             }
         });
     }
@@ -45,7 +58,7 @@ auto scrwl::ThreadPool::nq(F&& f) -> std::future<decltype(f())>
     using RetType = decltype(f());
 
     auto task = std::make_shared<std::packaged_task<RetType()>>(
-        // We be perfect forwarding
+        // Perfect forwarding!
         std::forward<F>(f)
     );
 
@@ -59,7 +72,20 @@ auto scrwl::ThreadPool::nq(F&& f) -> std::future<decltype(f())>
         this->task_list.emplace([task]() { (*task)(); });
     }
 
-    this->cond_var.notify_one();
+    this->task_condition.notify_one();
 
     return res;
+}
+
+scrwl::ThreadPool::~ThreadPool()
+{
+    {
+        std::unique_lock lock(this->task_mutex);
+
+        // Drain gang
+        this->drain_condition.wait(lock, [this] {
+            return this->task_list.empty() && this->active_tasks == 0;
+        });
+    }
+    this->stop_source.request_stop();
 }

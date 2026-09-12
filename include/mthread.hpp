@@ -21,9 +21,11 @@ namespace scrwl
     {
         std::stop_source stop_source;
         std::mutex task_mutex;
-        std::condition_variable_any cond_var;
+        std::condition_variable_any task_condition;
+        std::condition_variable_any drain_condition;
         std::vector<std::jthread> threads;
         std::deque<std::function<void()>> task_list;
+        unsigned int active_tasks;
 
         ThreadPool(std::size_t);
         ~ThreadPool();
