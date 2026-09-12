@@ -3,42 +3,63 @@
 #include <mutex>
 #include <optional>
 
-template <typename F>
-scrwl::ThreadPool::ThreadPool(std::size_t n, F func)
+scrwl::ThreadPool::ThreadPool(std::size_t size)
 {
-    this->threads.reserve(n);
-    for (int i = 0; i < n; i++)
-        this->threads.emplace_back(func);
-}
-
-std::optional<scrwl::QueueType> scrwl::Queue::pop()
-{
-
-    // Lock the queue
-    std::unique_lock<std::mutex> lock(this->mutex);
-
-    // Sit back while the queue is empty
-    c_var.wait(lock, [&] { return !this->queue.empty(); });
-
-    if (queue.empty())
+    for (std::size_t i = 0; i < size; i++)
     {
-        return std::nullopt;    
-    } else
-    {
-        // Get and delete the first element
-        scrwl::QueueType item = std::move(this->queue.front());
-        this->queue.pop_front(); 
+        this->threads.emplace_back([this] (std::stop_token /* Not needed */) {
+            auto stop_token = this->stop_source.get_token();
 
-        return item; // Implicit conversion my beloved <3
+            while (!stop_token.stop_requested())
+            {
+                std::function<void()> task;
+                {
+                    // Lock the tasklist
+                    std::unique_lock lock(this->task_mutex);
+
+                    // Lock is released here and the thread goes to sleep
+                    // Gets woken up when notified && this lambda returns true
+                    this->cond_var.wait(lock, stop_token, [this] {
+                        return this->stop_source.get_token().stop_requested()
+                                || !this->task_list.empty();
+                    });
+
+                    if (stop_token.stop_requested()) break; // Don't even wait
+
+                    // Get the next task to do now that the thread is woken up
+                    task = std::move(this->task_list.front());
+                    this->task_list.pop_front();
+
+                    // Release the lock here
+                }
+
+                task();
+            }
+        });
     }
 }
 
-void scrwl::Queue::push(scrwl::QueueType item)
+template <typename F>
+auto scrwl::ThreadPool::nq(F&& f) -> std::future<decltype(f())>
 {
-    // Lock the queue
-    std::unique_lock<std::mutex> lock(this->mutex);
-    this->queue.push_back(std::move(item));
-    lock.unlock();
+    using RetType = decltype(f());
 
-    this->c_var.notify_one(); // Let a thread know there is more stuff
+    auto task = std::make_shared<std::packaged_task<RetType()>>(
+        // We be perfect forwarding
+        std::forward<F>(f)
+    );
+
+    std::future<RetType> res = task->get_future();
+
+    {
+        std::unique_lock lock(this->task_mutex);
+
+        // Package that task into a function<void()>
+        // TODO: Maybe add parameters? Overkill maybe
+        this->task_list.emplace([task]() { (*task)(); });
+    }
+
+    this->cond_var.notify_one();
+
+    return res;
 }

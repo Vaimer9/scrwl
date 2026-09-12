@@ -3,7 +3,10 @@
 #include <condition_variable>
 #include <cstddef>
 #include <deque>
+#include <future>
 #include <mutex>
+#include <queue>
+#include <shared_mutex>
 #include <thread>
 #include <vector>
 
@@ -12,26 +15,21 @@
 namespace scrwl
 {
     using QueueType = scrwl::Site;
+    using FuncType = void();
 
     struct ThreadPool
     {
+        std::stop_source stop_source;
+        std::mutex task_mutex;
+        std::condition_variable_any cond_var;
         std::vector<std::jthread> threads;
+        std::deque<std::function<void()>> task_list;
 
+        ThreadPool(std::size_t);
+        ~ThreadPool();
+
+        // TODO: Make this more constrained
         template <typename F>
-        ThreadPool(std::size_t, F);
-        ~ThreadPool() = default;
-    };
-
-    struct Queue
-    {
-        std::deque<QueueType> queue;
-        mutable std::mutex mutex;
-        std::condition_variable_any c_var;
-
-        Queue() = default;
-
-        std::optional<QueueType> pop();
-        size_t size() const;
-        void push(QueueType);
+        auto nq(F&& f) -> std::future<decltype(f())>;
     };
 }
