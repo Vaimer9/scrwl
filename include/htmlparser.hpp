@@ -9,16 +9,9 @@
 
 namespace scrwl
 {
-    struct HtmlParser
+    namespace HtmlParser
     {
-        std::string raw, url;
-        std::optional<std::vector<std::string>> outlinks;
-        
-        HtmlParser(std::string raw, std::string url):
-            raw(raw), url(url) {};
-        HtmlParser(scrwl::Site&);
-        HtmlParser();
-        std::vector<std::string> extract_raw_outlinks();
-        std::vector<std::string> extract_outlinks();
+        std::vector<std::string> extract_raw_outlinks(std::string data);
+        std::vector<std::string> extract_outlinks(std::string data, std::string url);
     };
 }
