@@ -5,15 +5,20 @@ static const std::regex href_regex(
     std::regex::icase | std::regex::optimize
 );
 
-std::string scrwl::Site::get_data()
+// TODO: Implement LRU-cache deletion
+std::shared_ptr<scrwl::HostClient> scrwl::ClientPool::acquire(const std::string& key)
 {
-    if (!this->data.has_value())
+    std::unique_lock lock(this->mutex);
+    
+    // We don't directly emplace the full shared pointer here
+    // That is done later inside the if-statement
+    // Makes cache hits way more cheaper
+    auto [iterator, inserted] = this->clients.try_emplace(key, nullptr);
+
+    if (inserted)
     {
-        if (auto result = this->client.Get("/"))
-        {
-            scrwl::log_info("Recieved data from {}", this->url);
-            this->data = result->body;
-        }
+        iterator->second = std::make_shared<scrwl::HostClient>(key);
     }
-    return this->data.value_or("NULL");
+
+    return iterator->second;
 }

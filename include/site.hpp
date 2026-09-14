@@ -3,20 +3,35 @@
 #include <optional>
 #include <string>
 #include <httplib.h>
+#include <unordered_map>
 #include <vector>
 #include <regex>
 #include <print>
 
 namespace scrwl
 {
-    struct Site
+    struct Url
     {
         std::string url;
+        std::string referrer;
+        int depth = 0;
+    };
+
+    struct HostClient
+    {
         httplib::Client client;
-        std::optional<std::string> data;
+        // Multiple threads may hold a host client at once ! 
+        // Must make sure that only one of them is able to make a request
+        std::mutex mutex; 
+        HostClient(const std::string& base_url): client(base_url) {}
+    };
 
-        Site(std::string url): url(url), client(url) {}
+    struct ClientPool
+    {
+        std::mutex mutex;
+        std::unordered_map<std::string, std::shared_ptr<HostClient>> clients;
 
-        std::string get_data();
+        // This either gets a host from the map or creates one
+        std::shared_ptr<HostClient> acquire(const std::string& host);
     };
 }
