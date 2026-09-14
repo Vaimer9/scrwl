@@ -3,6 +3,7 @@
 #include <mutex>
 #include <optional>
 #include <contracts>
+#include <type_traits>
 
 scrwl::ThreadPool::ThreadPool(std::size_t size)
 {
@@ -52,10 +53,11 @@ scrwl::ThreadPool::ThreadPool(std::size_t size)
     }
 }
 
-template <typename F>
-auto scrwl::ThreadPool::nq(F&& f) -> std::future<decltype(f())>
+// nq = Enqueue
+template <typename F> requires std::invocable<F&>
+auto scrwl::ThreadPool::nq(F&& f) -> std::future<std::invoke_result_t<F&>>
 {
-    using RetType = decltype(f());
+    using RetType = std::invoke_result_t<F&>;
 
     auto task = std::make_shared<std::packaged_task<RetType()>>(
         // Perfect forwarding!

@@ -14,9 +14,6 @@
 
 namespace scrwl
 {
-    using QueueType = scrwl::Site;
-    using FuncType = void();
-
     struct ThreadPool
     {
         std::stop_source stop_source;
@@ -31,7 +28,16 @@ namespace scrwl
         ~ThreadPool();
 
         // TODO: Make this more constrained
-        template <typename F>
-        auto nq(F&& f) -> std::future<decltype(f())>;
+        template <typename F> requires std::invocable<F&>
+        auto nq(F&& f) -> std::future<std::invoke_result_t<F&>>;
+    };
+
+    struct UrlQueue
+    {
+        std::mutex list_mutex;
+        std::deque<scrwl::Url> site_list; // TODO: Make this a priority queue
+        std::unordered_set<std::string> visited_url;
+
+        std::optional<scrwl::Url> pop();
     };
 }
