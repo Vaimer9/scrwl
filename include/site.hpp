@@ -12,7 +12,7 @@ namespace scrwl
 {
     struct Url
     {
-        std::string url;
+        std::string link;
         std::string referrer;
         int depth = 0;
     };
@@ -29,9 +29,15 @@ namespace scrwl
     struct ClientPool
     {
         std::mutex mutex;
-        std::unordered_map<std::string, std::shared_ptr<HostClient>> clients;
+        std::unordered_map<std::string, std::shared_ptr<scrwl::HostClient>> clients;
 
         // This either gets a host from the map or creates one
-        std::shared_ptr<HostClient> acquire(const std::string& host);
+        std::shared_ptr<scrwl::HostClient> acquire(const std::string& host);
+    };
+
+    struct TaskCtx
+    {
+        const scrwl::Url& url;
+        const scrwl::HostClient& host;
     };
 }
