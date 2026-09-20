@@ -6,13 +6,29 @@
 
 #include "../include/scrwl.hpp"
 
+std::string callback(scrwl::TaskCtx ctx)
+{
+    
+}
+
 int main(int argc, char** argv) {
-    scrwl::Site site("https://crawler-test.com/");
-    scrwl::HtmlParser parser(site);
+    scrwl::UrlQueue q;    
 
-    auto links = parser.extract_outlinks();
+    // Simulate queue
+    q.push(scrwl::Url("one"));
+    q.push(scrwl::Url("two"));
+    q.push(scrwl::Url("three"));
+    q.push(scrwl::Url("one"));
 
-    scrwl::log_info("Got {} links from {}", links.size(), site.url);
+    scrwl::ThreadPool tp(4);
+    scrwl::ClientPool cp;
+
+    scrwl::Url url("https://crawler-test.com/");
+    std::shared_ptr<scrwl::HostClient> hc = cp.acquire(url.link);
+
+    std::future<std::string> ft = tp.nq(callback, scrwl::TaskCtx { scrwl::Url {""}, scrwl::HostClient { "" } });
+    
+    ft.get();
 
     return 0;
 }

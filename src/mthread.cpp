@@ -1,5 +1,4 @@
 #include "../include/mthread.hpp"
-#include "../include/scrwl.hpp"
 
 #include <mutex>
 #include <optional>
@@ -89,4 +88,39 @@ scrwl::ThreadPool::~ThreadPool()
         });
     }
     this->stop_source.request_stop();
+    this->task_condition.notify_all();
+}
+
+bool scrwl::UrlQueue::check_visited(std::string_view link)
+{
+    auto hash = std::hash<std::string_view>{}(link);
+    auto [_, inserted] = this->visited_hash.insert(hash); // Try inserting and check
+                                                          // if it inserted or nah
+
+    return !inserted;
+}
+
+void scrwl::UrlQueue::push(scrwl::Url url)
+{
+    std::unique_lock lock(this->mutex);
+
+    if (!this->check_visited(url.link))
+    {
+        this->site_list.push_back(url);
+    }
+}
+
+std::optional<scrwl::Url> scrwl::UrlQueue::pop()
+{
+    std::unique_lock lock(this->mutex);
+    
+    if (!this->site_list.empty())
+    {
+        scrwl::Url ret = this->site_list.back();
+        this->site_list.pop_back();
+
+        return ret;
+    } else {
+        return std::nullopt;
+    }
 }

@@ -20,11 +20,6 @@
 
 namespace scrwl
 {
-    struct TaskCtx
-    {
-        const scrwl::Url& url;
-        const scrwl::HostClient& host;
-    };
 
     struct ThreadPool
     {
@@ -45,10 +40,12 @@ namespace scrwl
 
     struct UrlQueue
     {
-        std::mutex list_mutex;
+        std::mutex mutex;
         std::deque<scrwl::Url> site_list; // TODO: Make this a priority queue
-        std::unordered_set<std::string> visited_url;
+        std::unordered_set<std::uint64_t> visited_hash;
 
+        bool check_visited(std::string_view link);
         std::optional<scrwl::Url> pop();
+        void push(scrwl::Url);
     };
 }
