@@ -1,9 +1,8 @@
 #include "../include/mthread.hpp"
 #include "../include/scrwl.hpp"
+
 #include <mutex>
 #include <optional>
-#include <contracts>
-#include <type_traits>
 
 scrwl::ThreadPool::ThreadPool(std::size_t size)
 {
@@ -30,8 +29,8 @@ scrwl::ThreadPool::ThreadPool(std::size_t size)
                     // Die if stop is requested
                     if (s_token.stop_requested()) return;
 
-                    // Or run the latest given task 
-                    task = std::move(this->task_list.front());
+                    // Or run the least recent given task 
+                    task = std::move(this->task_list.back());
                     this->task_list.pop_back();
 
                     this->active_tasks += 1; // Ongoing task now
@@ -45,7 +44,8 @@ scrwl::ThreadPool::ThreadPool(std::size_t size)
 
                     if (this->active_tasks == 0 && this->task_list.empty())
                     {
-                        this->drain_condition.notify_all(); // Tell the destructor its okay to die (existentialism)
+                        // Tell the destructor its okay to die (existentialism)
+                        this->drain_condition.notify_all();
                     }
                 }
             }
@@ -54,14 +54,13 @@ scrwl::ThreadPool::ThreadPool(std::size_t size)
 }
 
 // nq = Enqueue
-template <typename F> requires std::invocable<F&>
-auto scrwl::ThreadPool::nq(F&& f) -> std::future<std::invoke_result_t<F&>>
+template <typename F> requires std::invocable<F&, scrwl::TaskCtx>
+auto scrwl::ThreadPool::nq(F&& f, scrwl::TaskCtx ctx) -> std::future<std::invoke_result_t<F&, scrwl::TaskCtx>>
 {
-    using RetType = std::invoke_result_t<F&>;
+    using RetType = std::invoke_result_t<F&, scrwl::TaskCtx>;
 
     auto task = std::make_shared<std::packaged_task<RetType()>>(
-        // Perfect forwarding!
-        std::forward<F>(f)
+        /* lambda -> */ [f = std::forward<F>(f), ctx]() mutable { return f(ctx); }
     );
 
     std::future<RetType> res = task->get_future();
@@ -71,7 +70,7 @@ auto scrwl::ThreadPool::nq(F&& f) -> std::future<std::invoke_result_t<F&>>
 
         // Package that task into a function<void()>
         // TODO: Maybe add parameters? Overkill maybe
-        this->task_list.emplace([task]() { (*task)(); });
+        this->task_list.emplace_back([task]() { (*task)(); });
     }
 
     this->task_condition.notify_one();

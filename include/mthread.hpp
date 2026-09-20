@@ -2,18 +2,30 @@
 
 #include <condition_variable>
 #include <cstddef>
+#include <cstdint>
 #include <deque>
 #include <future>
 #include <mutex>
 #include <queue>
 #include <shared_mutex>
+#include <string_view>
 #include <thread>
 #include <vector>
+#include <functional>
+#include <concepts>
+#include <unordered_set>
+#include <type_traits>
 
-#include "./scrwl.hpp"
+#include "./site.hpp"
 
 namespace scrwl
 {
+    struct TaskCtx
+    {
+        const scrwl::Url& url;
+        const scrwl::HostClient& host;
+    };
+
     struct ThreadPool
     {
         std::stop_source stop_source;
@@ -27,9 +39,8 @@ namespace scrwl
         ThreadPool(std::size_t);
         ~ThreadPool();
 
-        // TODO: Make this more constrained
-        template <typename F> requires std::invocable<F&>
-        auto nq(F&& f) -> std::future<std::invoke_result_t<F&>>;
+        template <typename F> requires std::invocable<F&, scrwl::TaskCtx>
+        auto nq(F&&, TaskCtx) -> std::future<std::invoke_result_t<F&, scrwl::TaskCtx>>;
     };
 
     struct UrlQueue
