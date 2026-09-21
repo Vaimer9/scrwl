@@ -6,9 +6,10 @@
 
 #include "../include/scrwl.hpp"
 
-std::string callback(scrwl::TaskCtx ctx)
+std::vector<std::string> callback(scrwl::TaskCtx ctx)
 {
-    
+    auto res = ctx.host->get_data("/");
+    return scrwl::HtmlParser::extract_outlinks(res, ctx.url.link);
 }
 
 int main(int argc, char** argv) {
@@ -26,9 +27,12 @@ int main(int argc, char** argv) {
     scrwl::Url url("https://crawler-test.com/");
     std::shared_ptr<scrwl::HostClient> hc = cp.acquire(url.link);
 
-    std::future<std::string> ft = tp.nq(callback, scrwl::TaskCtx { scrwl::Url {""}, scrwl::HostClient { "" } });
+    auto ft = tp.nq(callback, scrwl::TaskCtx { url, hc });
     
-    ft.get();
+    for (auto&& smth : ft.get())
+    {
+        std::println("{}", smth);
+    }
 
     return 0;
 }

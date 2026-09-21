@@ -24,6 +24,8 @@ namespace scrwl
         // Must make sure that only one of them is able to make a request
         std::mutex mutex; 
         HostClient(const std::string& base_url): client(base_url) {}
+
+        std::string get_data(const std::string);
     };
 
     struct ClientPool
@@ -37,7 +39,7 @@ namespace scrwl
 
     struct TaskCtx
     {
-        const scrwl::Url& url;
-        const scrwl::HostClient& host;
+        scrwl::Url url;
+        std::shared_ptr<scrwl::HostClient> host;
     };
 }

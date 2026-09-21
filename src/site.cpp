@@ -1,10 +1,5 @@
 #include "../include/scrwl.hpp"
 
-static const std::regex href_regex(
-    R"(<a\b[^>]*?\s+href\s*=\s*["']([^"']*)["'][^>]*>)",
-    std::regex::icase | std::regex::optimize
-);
-
 // TODO: Implement LRU-cache deletion
 std::shared_ptr<scrwl::HostClient> scrwl::ClientPool::acquire(const std::string& key)
 {
@@ -21,4 +16,10 @@ std::shared_ptr<scrwl::HostClient> scrwl::ClientPool::acquire(const std::string&
     }
 
     return iterator->second;
+}
+
+std::string scrwl::HostClient::get_data(std::string url)
+{
+    std::unique_lock lock(this->mutex);
+    return (this->client.Get(url))->body;
 }
