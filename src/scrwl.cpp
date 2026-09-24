@@ -2,7 +2,7 @@
 
 void callback(scrwl::TaskCtx ctx)
 {
-    scrwl::log_info("Started the task with {}", ctx.url.link);
+    scrwl::log_info("Hit {}", ctx.url.link);
     if (auto res = ctx.host->get_data("/"))
     {
          scrwl::HtmlParser::extract_outlinks(
@@ -11,10 +11,8 @@ void callback(scrwl::TaskCtx ctx)
              std::ref(ctx.url_q)
          );
     } else {
-        scrwl::log_err("Didn't run with {}", ctx.url.link);
+        scrwl::log_err("Failed {}", ctx.url.link);
     }
-
-    scrwl::log_info("Did the task with {}", ctx.url.link);
 }
 
 scrwl::Scrawl::Scrawl(std::string seed, std::size_t depth)
@@ -30,6 +28,8 @@ void scrwl::Scrawl::start()
         if (auto url = this->url_q.wait_and_pop())
         {
             auto [host, link] = scrwl::HtmlParser::split_path(url.value().link);
+
+            scrwl::log_info("Depth {}", url->depth);
 
             this->tp.nq(
                 callback,

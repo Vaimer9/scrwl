@@ -106,10 +106,8 @@ std::optional<scrwl::Url> scrwl::UrlQueue::pop()
 
 std::optional<scrwl::Url> scrwl::UrlQueue::wait_and_pop()
 {
-    scrwl::log_info("Starting a pop!");
     std::unique_lock lock(this->mutex);
     this->subscriber_cv.wait(lock, [this]() { return !this->site_list.empty(); });
     
-    scrwl::log_info("Wait ended and popped!");
     return this->pop();
 }

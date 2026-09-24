@@ -32,8 +32,17 @@ void scrwl::HtmlParser::extract_outlinks(
         if (value.front() == '/')
         {
             // Strip the last char of the original url so we don't double up slashes
-            value = url.link.substr(0, url.link.length() - 1) + value;
+            auto [origin, _] = scrwl::HtmlParser::split_path(url.link);
+            value = origin + value;
         }
+
+        // TODO
+        if (value.empty()) continue;
+        if (value.starts_with('#')) continue;
+        if (value.starts_with("mailto:")) continue;
+        if (value.starts_with("javascript:")) continue;
+        if (value.starts_with("data:")) continue;
+        if (value.starts_with("relativeurl:")) continue;
 
         auto created = scrwl::Url(value, url.link, url.depth + 1);
 

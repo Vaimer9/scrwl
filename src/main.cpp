@@ -7,8 +7,13 @@
 #include "../include/scrwl.hpp"
 
 int main(int argc, char** argv) {
-    scrwl::Scrawl sc("https://crawler-test.com/", 50);
-    sc.start();
+
+    if (argc >= 3) {
+        scrwl::Scrawl sc(argv[1], std::stoi(argv[2]));
+        sc.start();
+    }
+
+    std::println("Ended");
 
     return 0;
 }
