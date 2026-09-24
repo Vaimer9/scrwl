@@ -7,51 +7,48 @@ static const std::regex href_regex(
     std::regex::icase | std::regex::optimize
 );
 
-std::vector<std::string> scrwl::HtmlParser::extract_raw_outlinks(std::string data)
-{
-    std::vector<std::string> outlinks;
-
-    auto begin = std::sregex_iterator(
-        data.begin(), data.end(), href_regex
-    );
-    auto end = std::sregex_iterator();
-
-    scrwl::log_info("Running regex patterns");
+void scrwl::HtmlParser::extract_outlinks(
+    const std::string& data,
+    const scrwl::Url& url,
+    scrwl::UrlQueue& url_queue
+) {
+    auto begin = std::sregex_iterator(data.begin(), data.end(), href_regex);
+    auto end   = std::sregex_iterator();
 
     for (auto iter = begin; iter != end; ++iter)
     {
         const std::smatch& m = *iter;
-        outlinks.emplace_back(m[1].str());
-    }
+        std::string value = m[1].str();
 
-    return outlinks;
+        // Skip empty matches so value.front() is safe
+        if (value.empty())
+            continue;
+
+        // Skip relativeurl: entries
+        if (value.starts_with("relativeurl:"))
+            continue;
+
+        // Expand root-relative links
+        if (value.front() == '/')
+        {
+            // Strip the last char of the original url so we don't double up slashes
+            value = url.link.substr(0, url.link.length() - 1) + value;
+        }
+
+        auto created = scrwl::Url(value, url.link, url.depth + 1);
+
+        url_queue.push(std::move(created));
+    }
 }
 
-
-std::vector<std::string> scrwl::HtmlParser::extract_outlinks(std::string data, std::string url)
+std::pair<std::string, std::string> scrwl::HtmlParser::split_path(const std::string& url)
 {
-    std::vector<std::string> raw = scrwl::HtmlParser::extract_raw_outlinks(data);
+    auto scheme_end = url.find("://");
+    auto host_start = scheme_end + 3;
+    auto path_start = url.find('/', host_start);
 
-    // TODO: Handle relativeurl
-
-    for (int i = 0; i < raw.size(); i++)
-    {
-        auto& value = raw[i];
-        // Replace all inlinks with actual usable links
-        if (value[0] == '/')
-        {
-            // Remove the last slash from the original url
-            value = url.substr(0, url.length() - 1) + value;
-        }
-
-        // Remove relativeurl in O(1) time
-        // I hope this doesn't leak memory lmao
-        if (value.starts_with("relativeurl:"))
-        {
-            value = std::move(raw.back());
-            raw.pop_back();
-        }
-    }
-
-    return raw;
+    if (path_start == std::string::npos)
+        return { url, "/" };
+    else
+        return { url.substr(0, path_start), url.substr(path_start) };
 }

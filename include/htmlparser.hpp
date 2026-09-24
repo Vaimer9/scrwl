@@ -1,8 +1,11 @@
 #pragma once
 
+#include "mthread.hpp"
 #include "site.hpp"
+#include <deque>
 #include <optional>
 #include <string>
+#include <utility>
 #include <vector>
 #include <regex>
 #include <print>
@@ -11,7 +14,7 @@ namespace scrwl
 {
     namespace HtmlParser
     {
-        std::vector<std::string> extract_raw_outlinks(std::string data);
-        std::vector<std::string> extract_outlinks(std::string data, std::string url);
+        void extract_outlinks(const std::string& data, const scrwl::Url& url, scrwl::UrlQueue& url_queue);
+        std::pair<std::string, std::string> split_path(const std::string& url);
     };
 }
