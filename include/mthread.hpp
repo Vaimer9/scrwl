@@ -33,6 +33,8 @@ namespace scrwl
         ~ThreadPool();
 
         // nq = Enqueue
+        // I hate having the definition in a header file
+        // But we live in a cruel world
         template <typename F> requires std::invocable<F&, scrwl::TaskCtx>
         auto nq(F&& f, TaskCtx ctx) -> std::future<std::invoke_result_t<F&, scrwl::TaskCtx>>
         {
@@ -63,9 +65,11 @@ namespace scrwl
         std::mutex mutex;
         std::deque<scrwl::Url> site_list; // TODO: Make this a priority queue
         std::unordered_set<std::uint64_t> visited_hash;
+        std::condition_variable_any subscriber_cv;
 
         bool check_visited(std::string_view link);
-        std::optional<scrwl::Url> pop();
         void push(scrwl::Url);
+        std::optional<scrwl::Url> pop();
+        std::optional<scrwl::Url> wait_and_pop();
     };
 }

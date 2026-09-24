@@ -25,7 +25,7 @@ namespace scrwl
         std::mutex mutex; 
         HostClient(const std::string& base_url): client(base_url) {}
 
-        std::string get_data(const std::string);
+        std::optional<std::string> get_data(const std::string);
     };
 
     struct ClientPool

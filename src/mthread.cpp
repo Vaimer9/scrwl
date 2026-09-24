@@ -83,12 +83,15 @@ void scrwl::UrlQueue::push(scrwl::Url url)
     {
         this->site_list.push_back(url);
     }
+
+    // Tell the main listener thread its time to wake up
+    this->subscriber_cv.notify_all(); 
 }
 
+// THERE IS NO LOCKING HERE
+// CALL wait_and_pop TO AVOID DATA RACE!
 std::optional<scrwl::Url> scrwl::UrlQueue::pop()
 {
-    std::unique_lock lock(this->mutex);
-    
     if (!this->site_list.empty())
     {
         scrwl::Url ret = this->site_list.front();
@@ -98,4 +101,11 @@ std::optional<scrwl::Url> scrwl::UrlQueue::pop()
     } else {
         return std::nullopt;
     }
+}
+
+std::optional<scrwl::Url> scrwl::UrlQueue::wait_and_pop()
+{
+    std::unique_lock lock(this->mutex);
+    this->subscriber_cv.wait(lock, [this]() { return !this->site_list.empty(); });
+    return this->pop();
 }

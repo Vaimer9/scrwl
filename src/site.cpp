@@ -18,8 +18,14 @@ std::shared_ptr<scrwl::HostClient> scrwl::ClientPool::acquire(const std::string&
     return iterator->second;
 }
 
-std::string scrwl::HostClient::get_data(std::string url)
+std::optional<std::string> scrwl::HostClient::get_data(std::string url)
 {
     std::unique_lock lock(this->mutex);
-    return (this->client.Get(url))->body;
+
+    if (auto res = this->client.Get(url))
+    {
+        return res.value().body;
+    } else {
+        return std::nullopt;
+    }
 }
