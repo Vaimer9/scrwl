@@ -91,8 +91,8 @@ std::optional<scrwl::Url> scrwl::UrlQueue::pop()
     
     if (!this->site_list.empty())
     {
-        scrwl::Url ret = this->site_list.back();
-        this->site_list.pop_back();
+        scrwl::Url ret = this->site_list.front();
+        this->site_list.pop_front();
 
         return ret;
     } else {
