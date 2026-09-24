@@ -1,4 +1,5 @@
 #include "../include/mthread.hpp"
+#include "../include/scrwl.hpp"
 
 #include <mutex>
 #include <optional>
@@ -79,7 +80,7 @@ void scrwl::UrlQueue::push(scrwl::Url url)
 {
     std::unique_lock lock(this->mutex);
 
-    if (!this->check_visited(url.link))
+    if (url.depth <= scrwl::Scrawl::MAX_DEPTH && !this->check_visited(url.link))
     {
         this->site_list.push_back(url);
     }
@@ -105,7 +106,10 @@ std::optional<scrwl::Url> scrwl::UrlQueue::pop()
 
 std::optional<scrwl::Url> scrwl::UrlQueue::wait_and_pop()
 {
+    scrwl::log_info("Starting a pop!");
     std::unique_lock lock(this->mutex);
     this->subscriber_cv.wait(lock, [this]() { return !this->site_list.empty(); });
+    
+    scrwl::log_info("Wait ended and popped!");
     return this->pop();
 }

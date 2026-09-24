@@ -26,6 +26,7 @@ std::optional<std::string> scrwl::HostClient::get_data(std::string url)
     {
         return res.value().body;
     } else {
+        scrwl::log_err("GET {} failed: {}", url, httplib::to_string(res.error()));
         return std::nullopt;
     }
 }

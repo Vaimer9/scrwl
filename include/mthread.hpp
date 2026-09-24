@@ -18,6 +18,25 @@
 
 namespace scrwl
 {
+    struct UrlQueue
+    {
+        std::mutex mutex;
+        std::deque<scrwl::Url> site_list; // TODO: Make this a priority queue
+        std::unordered_set<std::uint64_t> visited_hash;
+        std::condition_variable_any subscriber_cv;
+
+        bool check_visited(std::string_view link);
+        void push(scrwl::Url);
+        std::optional<scrwl::Url> pop();
+        std::optional<scrwl::Url> wait_and_pop();
+    };
+
+    struct TaskCtx
+    {
+        scrwl::Url url;
+        std::shared_ptr<scrwl::HostClient> host;
+        scrwl::UrlQueue& url_q;
+    };
 
     struct ThreadPool
     {
@@ -60,16 +79,4 @@ namespace scrwl
         }
     };
 
-    struct UrlQueue
-    {
-        std::mutex mutex;
-        std::deque<scrwl::Url> site_list; // TODO: Make this a priority queue
-        std::unordered_set<std::uint64_t> visited_hash;
-        std::condition_variable_any subscriber_cv;
-
-        bool check_visited(std::string_view link);
-        void push(scrwl::Url);
-        std::optional<scrwl::Url> pop();
-        std::optional<scrwl::Url> wait_and_pop();
-    };
 }

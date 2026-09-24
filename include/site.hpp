@@ -14,7 +14,12 @@ namespace scrwl
     {
         std::string link;
         std::string referrer;
-        int depth = 0;
+        int depth;
+
+        Url(std::string l):
+            link(l), referrer(""), depth(0) {}
+        Url(std::string l, std::string r, int d):
+            link(l), referrer(r), depth(d) {}
     };
 
     struct HostClient
@@ -37,9 +42,4 @@ namespace scrwl
         std::shared_ptr<scrwl::HostClient> acquire(const std::string& host);
     };
 
-    struct TaskCtx
-    {
-        scrwl::Url url;
-        std::shared_ptr<scrwl::HostClient> host;
-    };
 }
