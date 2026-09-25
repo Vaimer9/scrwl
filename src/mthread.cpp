@@ -107,7 +107,16 @@ std::optional<scrwl::Url> scrwl::UrlQueue::pop()
 std::optional<scrwl::Url> scrwl::UrlQueue::wait_and_pop()
 {
     std::unique_lock lock(this->mutex);
+    scrwl::log_warn("Starting pop with size {}", this->site_list.size());
+
     this->subscriber_cv.wait(lock, [this]() { return !this->site_list.empty(); });
+    scrwl::log_warn("Ended pop {}", this->site_list.size());
     
     return this->pop();
+}
+
+std::size_t scrwl::UrlQueue::size()
+{
+    std::unique_lock lock(this->mutex);
+    return this->site_list.size();
 }

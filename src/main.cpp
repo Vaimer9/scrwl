@@ -8,12 +8,14 @@
 
 int main(int argc, char** argv) {
 
-    if (argc >= 3) {
-        scrwl::Scrawl sc(argv[1], std::stoi(argv[2]));
+    if (argc >= 4) {
+        scrwl::Scrawl sc(
+            argv[1],
+            std::stoi(argv[2]),
+            std::stoi(argv[3])
+        );
         sc.start();
     }
-
-    std::println("Ended");
 
     return 0;
 }

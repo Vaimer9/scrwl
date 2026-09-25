@@ -29,6 +29,7 @@ namespace scrwl
         void push(scrwl::Url);
         std::optional<scrwl::Url> pop();
         std::optional<scrwl::Url> wait_and_pop();
+        std::size_t size();
     };
 
     struct TaskCtx

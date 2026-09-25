@@ -15,21 +15,20 @@ void callback(scrwl::TaskCtx ctx)
     }
 }
 
-scrwl::Scrawl::Scrawl(std::string seed, std::size_t depth)
+scrwl::Scrawl::Scrawl(std::string seed, std::size_t breadth, std::size_t depth)
 {
     scrwl::Scrawl::MAX_DEPTH = depth;
+    this->MAX_BREADTH = breadth;
     this->url_q.push(scrwl::Url(seed));
 }
 
 void scrwl::Scrawl::start()
 {
-    auto i = 0;
+    auto running_breadth = 0;
     while (true) {
         if (auto url = this->url_q.wait_and_pop())
         {
             auto [host, link] = scrwl::HtmlParser::split_path(url.value().link);
-
-            scrwl::log_info("Depth {}", url->depth);
 
             this->tp.nq(
                 callback,
@@ -42,5 +41,12 @@ void scrwl::Scrawl::start()
 
             if (url.value().depth > scrwl::Scrawl::MAX_DEPTH) break;
         }
+
+        if (running_breadth >= this->MAX_BREADTH) break;
+        scrwl::log_info("Breadth: {} with size {}", running_breadth, this->url_q.size());
+
+        running_breadth += 1;
     }
+    
+    scrwl::log_info("Scrawl Ended.");
 }
